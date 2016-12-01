@@ -76,14 +76,18 @@ class MainTableViewController: UITableViewController, MQTTSessionDelegate {
                 let deviceName = device["name"] as! String
                 let deviceTopic = device["topic"] as! String
                 let deviceFirmware = device["firmware_version"] as! String
+                let deviceType = device["type"] as! Int
                 
-                self.addDevice(id: id, name: deviceName, topic: deviceTopic, firmware: deviceFirmware)
+                self.addDevice(id: id, type: deviceType, name: deviceName, topic: deviceTopic, firmware: deviceFirmware)
             }
         }
     }
     
     func mqttDidDisconnect(session: MQTTSession) {
         print("Disconnected!")
+        print("Reconnecting...")
+        sharedMQTTSingleton.establishConnection(host: "192.168.1.10")
+        sharedMQTTSingleton.subscribeToChannel(channel: "devices")
     }
     
     func mqttSocketErrorOccurred(session: MQTTSession) {
@@ -92,7 +96,7 @@ class MainTableViewController: UITableViewController, MQTTSessionDelegate {
     
     // MARK: Custom functions
     
-    func addDevice(id: Int, name: String, topic: String, firmware: String) {
+    func addDevice(id: Int, type: Int, name: String, topic: String, firmware: String) {
         let managedContext = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
         
         let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Device")
@@ -102,8 +106,9 @@ class MainTableViewController: UITableViewController, MQTTSessionDelegate {
         do {
             let results = try managedContext.fetch(fetchRequest) as! [Device]
             if results.count > 0 {
-                results.first?.topic = topic
-                results.first?.firmware = firmware
+                results.first?.setValue(topic, forKey: "topic")
+                results.first?.setValue(type, forKey: "type")
+                results.first?.setValue(firmware, forKey: "firmware")
             } else {
                 let entity =  NSEntityDescription.entity(forEntityName: "Device", in:managedContext)
                 let device = NSManagedObject(entity: entity!, insertInto: managedContext)
@@ -112,6 +117,7 @@ class MainTableViewController: UITableViewController, MQTTSessionDelegate {
                 device.setValue(id, forKey: "id")
                 device.setValue(name, forKey: "name")
                 device.setValue(topic, forKey: "topic")
+                device.setValue(type, forKey: "type")
                 
                 devices.append(device)
             }
@@ -182,6 +188,8 @@ class MainTableViewController: UITableViewController, MQTTSessionDelegate {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         selectedDevice = devices[indexPath.row]
+        
+        
     }
 
 }

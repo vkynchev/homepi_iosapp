@@ -60,6 +60,9 @@ class MQTTSingleton: MQTTSessionDelegate {
     
     func mqttDidDisconnect(session: MQTTSession) {
         print("Disconnected!")
+        print("Reconnecting...")
+        self.establishConnection(host: "192.168.1.10");
+        self.subscribeToChannel(channel: "devices")
     }
     
     func mqttSocketErrorOccurred(session: MQTTSession) {

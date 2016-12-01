@@ -17,15 +17,19 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
 
     var mqttSession: MQTTSession!
     
+    var hiddenSections = [Int]()
+    
     @IBOutlet var sliderElements: [UISlider]!
     @IBOutlet var switchElements: [UISwitch]!
     
     @IBOutlet weak var deviceNameLabel: UILabel!
     @IBOutlet weak var deviceIDLabel: UILabel!
+    @IBOutlet weak var deviceTypeLabel: UILabel!
     @IBOutlet weak var deviceFirmwareLabel: UILabel!
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
         
         sharedMQTTSingleton.subscribeToChannel(channel: selectedDevice.value(forKey: "topic") as! String + "/state")
         
@@ -39,6 +43,14 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
         deviceIDLabel.text = String(deviceID)
         deviceFirmwareLabel.text = selectedDevice.value(forKey: "firmware") as! String?
         //nameTextField.text = selectedDevice.value(forKey: "name") as! String?
+        
+        switch selectedDevice.value(forKey: "type") as! Int {
+        case 0:
+            deviceTypeLabel.text = "Advanced Controller"
+            hiddenSections.append(3)
+        default:
+            deviceTypeLabel.text = "No device type"
+        }
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -96,7 +108,7 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
         
         let pinNumber = uislider.tag
         let pinValue = round(uislider.value)
-        let pinCommand = ["pin": pinNumber, "value": Int(pinValue)]
+        let pinCommand = ["command": "set_pin", "pin": pinNumber, "value": Int(pinValue)] as [String : Any]
         
         let data = try! JSONSerialization.data(withJSONObject: pinCommand, options: [])
             
@@ -116,9 +128,9 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
         var pinCommand: [String: Any]!
         
         if(uiswitch.isOn) {
-            pinCommand = ["pin": pinNumber, "value": 1023]
+            pinCommand = ["command": "set_pin", "pin": pinNumber, "value": 1023]
         } else {
-            pinCommand = ["pin": pinNumber, "value": 0]
+            pinCommand = ["command": "set_pin", "pin": pinNumber, "value": 0]
         }
         
         let data = try! JSONSerialization.data(withJSONObject: pinCommand, options: [])
@@ -197,6 +209,58 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
             self.present(alertController, animated: true, completion: nil)
         }
     }
+    
+    override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        if hiddenSections.contains(section) {
+            return 0.1
+        }
+        
+        if hiddenSections.contains(section-1) {
+            return 18
+        }
+        
+        if section == 0 {
+            return 56
+        }
+        
+        return 36
+    }
+    
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        if hiddenSections.contains(section) {
+            return ""
+        }
+        
+        switch section {
+        case 0:
+            return "INFO"
+        case 1:
+            return "RGB LED"
+        case 2:
+            return "GPIO"
+        default:
+            return "I AM HIDDEN"
+        }
+    }
+    
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if hiddenSections.contains(section) {
+            return 0
+        }
+        
+        switch section {
+        case 0:
+            return 4
+        case 1:
+            return 3
+        case 2:
+            return 11
+        case 3:
+            return 1
+        default:
+            return 0
+        }
+    }
 
     // MARK: MQTTSessionProtocol
     
@@ -219,6 +283,10 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
     
     func mqttDidDisconnect(session: MQTTSession) {
         print("Disconnected!")
+        print("Reconnecting...")
+        sharedMQTTSingleton.establishConnection(host: "192.168.1.10")
+        sharedMQTTSingleton.subscribeToChannel(channel: "devices")
+        sharedMQTTSingleton.subscribeToChannel(channel: selectedDevice.value(forKey: "topic") as! String + "/state")
     }
     
     func mqttSocketErrorOccurred(session: MQTTSession) {
