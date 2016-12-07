@@ -48,6 +48,14 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
         case 0:
             deviceTypeLabel.text = "Advanced Controller"
             hiddenSections.append(3)
+        case 1:
+            deviceTypeLabel.text = "Power Outlet"
+            hiddenSections.append(1)
+            hiddenSections.append(2)
+        case 2:
+            deviceTypeLabel.text = "LED Controller"
+            hiddenSections.append(2)
+            hiddenSections.append(3)
         default:
             deviceTypeLabel.text = "No device type"
         }
@@ -239,7 +247,7 @@ class DeviceTableViewController: UITableViewController, MQTTSessionDelegate {
         case 2:
             return "GPIO"
         default:
-            return "I AM HIDDEN"
+            return "OUTLETS"
         }
     }
     
